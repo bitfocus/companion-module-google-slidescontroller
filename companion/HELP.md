@@ -4,7 +4,7 @@ This module allows you to control the Google Slides Opener Electron app from Bit
 
 The app runs on your presentation computer and exposes an HTTP API; this module connects to that API to open presentations, navigate slides, control speaker notes, and more.
 
-- **App (required):** [Google Slides Opener](https://github.com/nerif-tafu/gslide-opener) — run it on the same machine as Companion (or use the app’s Host/Port to point to another machine).
+- **App (required):** [Google Slides Opener](https://github.com/TomsFaire/Google-Slides-Controller) — run it on the same machine as Companion (or use the app’s Host/Port to point to another machine).
 
 ## Setup
 

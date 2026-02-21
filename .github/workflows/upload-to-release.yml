@@ -1,0 +1,50 @@
+# Manual workflow: build the module and upload the .tgz to an *existing* release.
+# Use this when you can't re-push a tag (e.g. repo rules forbid deleting tags).
+# Actions → Upload to release → Run workflow → choose the release tag (e.g. v1.0.0).
+name: Upload to release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to upload the .tgz to (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Package Companion Module
+        run: yarn run package
+
+      - name: List build output
+        run: ls -la *.tgz 2>/dev/null || ls -la
+
+      - name: Upload .tgz to existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tgz=$(ls *.tgz 2>/dev/null | head -1)
+          if [ -z "$tgz" ]; then
+            echo "No .tgz found"
+            exit 1
+          fi
+          gh release upload "${{ inputs.release_tag }}" "$tgz" --clobber

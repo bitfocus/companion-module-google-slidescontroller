@@ -35,11 +35,14 @@ jobs:
       - name: Package Companion Module
         run: yarn run package
 
+      - name: List build output
+        run: ls -la *.tgz pkg.tgz 2>/dev/null || ls -la
+
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
           name: companion-module-google-slidescontroller
-          path: pkg.tgz
+          path: "*.tgz"
           retention-days: 30
 
   release:

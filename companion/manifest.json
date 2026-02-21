@@ -1,0 +1,26 @@
+{
+  "id": "google-slidescontroller",
+  "name": "Google Slides Controller",
+  "shortname": "google-slidescontroller",
+  "description": "Control Google Slides presentations with automatic presentation mode and multi-monitor support",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": "git+https://github.com/bitfocus/companion-module-google-slidescontroller.git",
+  "bugs": "https://github.com/bitfocus/companion-module-google-slidescontroller/issues",
+  "maintainers": [
+    {
+      "name": "Bitfocus",
+      "email": "support@bitfocus.io"
+    }
+  ],
+  "runtime": {
+    "type": "node22",
+    "api": "nodejs-ipc",
+    "apiVersion": "0.0.0",
+    "entrypoint": "../main.js"
+  },
+  "legacyIds": ["gslide-opener"],
+  "manufacturer": "Bitfocus",
+  "products": ["Google Slides Controller"],
+  "keywords": ["google", "slides", "presentation", "powerpoint"]
+}

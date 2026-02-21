@@ -1,0 +1,15 @@
+node_modules/
+package-lock.json
+/pkg
+*.tgz
+/dist
+DEBUG-*
+/.yarn
+/.vscode
+
+# macOS resource forks
+Icon
+**/Icon
+**/Icon?
+**/Icon\r
+**/.Icon

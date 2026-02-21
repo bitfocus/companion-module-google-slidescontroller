@@ -1,0 +1,35 @@
+{
+  "name": "companion-module-google-slidescontroller",
+  "version": "1.0.0",
+  "description": "Bitfocus Companion module for Google Slides Opener / Google Slides Controller",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "companion-module-build",
+    "format": "prettier -w ."
+  },
+  "keywords": [
+    "companion",
+    "bitfocus",
+    "google-slides"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitfocus/companion-module-google-slidescontroller.git"
+  },
+  "engines": {
+    "node": "^22.20",
+    "yarn": "^4"
+  },
+  "dependencies": {
+    "@companion-module/base": "~1.14.1"
+  },
+  "devDependencies": {
+    "@companion-module/tools": "^2.6.1",
+    "prettier": "^3.7.4"
+  },
+  "prettier": "@companion-module/tools/.prettierrc.json",
+  "packageManager": "yarn@4.12.0"
+}

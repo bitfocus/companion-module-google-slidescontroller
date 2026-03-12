@@ -286,6 +286,36 @@ module.exports = function (self) {
 				}
 			},
 		},
+
+		disable_backup_forwarding: {
+			name: 'Disable Backup Forwarding',
+			description: 'Stop sending commands to backup machines (primary only). Use for deck refresh or failover.',
+			options: [],
+			callback: async () => {
+				try {
+					self.log('info', 'Disabling backup forwarding')
+					const response = await self.apiRequest('POST', '/api/backup-forwarding', { enabled: false })
+					self.log('info', response.message || 'Backup forwarding disabled')
+				} catch (error) {
+					self.log('error', `Failed to disable backup forwarding: ${error.message}`)
+				}
+			},
+		},
+
+		enable_backup_forwarding: {
+			name: 'Enable Backup Forwarding',
+			description: 'Resume sending commands to backup machines (primary only).',
+			options: [],
+			callback: async () => {
+				try {
+					self.log('info', 'Enabling backup forwarding')
+					const response = await self.apiRequest('POST', '/api/backup-forwarding', { enabled: true })
+					self.log('info', response.message || 'Backup forwarding enabled')
+				} catch (error) {
+					self.log('error', `Failed to enable backup forwarding: ${error.message}`)
+				}
+			},
+		},
 	}
 	
 	console.log('[gslide-opener] actions.js - Registering', Object.keys(actionDefinitions).length, 'actions')

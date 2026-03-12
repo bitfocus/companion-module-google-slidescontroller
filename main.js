@@ -24,7 +24,9 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			presentationDisplayId: null,
 			notesDisplayId: null,
 			loginState: false,
-			loggedInUser: null
+			loggedInUser: null,
+			backupForwardingEnabled: false,
+			backupStatuses: []
 		}
 		
 		// Polling interval
@@ -292,7 +294,17 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			{
 				variableId: 'logged_in_user',
 				name: 'Logged In User (Email)'
-			}
+			},
+			{
+				variableId: 'backup_forwarding_enabled',
+				name: 'Backup Forwarding Enabled (Primary Only)'
+			},
+			{ variableId: 'backup_1_ip', name: 'Backup 1 IP' },
+			{ variableId: 'backup_1_status', name: 'Backup 1 Status' },
+			{ variableId: 'backup_2_ip', name: 'Backup 2 IP' },
+			{ variableId: 'backup_2_status', name: 'Backup 2 Status' },
+			{ variableId: 'backup_3_ip', name: 'Backup 3 IP' },
+			{ variableId: 'backup_3_status', name: 'Backup 3 Status' }
 		]
 		
 		this.setVariableDefinitions(variables)
@@ -394,6 +406,20 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 					return this.state.loginState === true
 				},
 				showInvert: true
+			},
+			backup_forwarding_enabled: {
+				type: 'boolean',
+				name: 'Backup Forwarding Enabled',
+				description: 'Indicates when primary is forwarding commands to backup machines (primary mode only)',
+				defaultStyle: {
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 150, 100)
+				},
+				options: [],
+				callback: (feedback) => {
+					return this.state.backupForwardingEnabled === true
+				},
+				showInvert: true
 			}
 		}
 		
@@ -433,8 +459,23 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			presentationDisplayId: response.presentationDisplayId !== null && response.presentationDisplayId !== undefined ? response.presentationDisplayId : null,
 			notesDisplayId: response.notesDisplayId !== null && response.notesDisplayId !== undefined ? response.notesDisplayId : null,
 			loginState: response.loginState === true,
-			loggedInUser: response.loggedInUser || null
+			loggedInUser: response.loggedInUser || null,
+			backupForwardingEnabled: response.backupForwardingEnabled === true,
+			backupStatuses: this.state.backupStatuses || []
 		}
+		const isPrimary = response.backupForwardingEnabled !== undefined && response.backupForwardingEnabled !== null
+		if (isPrimary) {
+			try {
+				const backupData = await this.apiRequest('GET', '/api/backup-status')
+				newState.backupStatuses = Array.isArray(backupData.backups) ? backupData.backups : []
+			} catch (e) {
+				// keep previous backupStatuses on failure
+			}
+		} else {
+			newState.backupStatuses = []
+		}
+		const backupStatusesJson = JSON.stringify(newState.backupStatuses)
+		const prevBackupStatusesJson = JSON.stringify(this.state.backupStatuses || [])
 		
 		// Check if state changed (compare all fields)
 		const stateChanged = 
@@ -453,12 +494,14 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			this.state.presentationTitle !== newState.presentationTitle ||
 			this.state.timerElapsed !== newState.timerElapsed ||
 			this.state.presentationDisplayId !== newState.presentationDisplayId ||
-			this.state.notesDisplayId !== newState.notesDisplayId
+			this.state.notesDisplayId !== newState.notesDisplayId ||
+			this.state.backupForwardingEnabled !== newState.backupForwardingEnabled ||
+			backupStatusesJson !== prevBackupStatusesJson
 		
 		if (stateChanged) {
 			this.state = newState
-			
-			// Update all variables
+			const b = this.state.backupStatuses
+			const fmt = (s) => (s === 'connected' ? 'Connected' : s === 'disconnected' ? 'Disconnected' : s === 'checking' ? 'Checking…' : String(s || '—'))
 			this.setVariableValues({
 				presentation_open: this.state.presentationOpen ? 'Yes' : 'No',
 				notes_open: this.state.notesOpen ? 'Yes' : 'No',
@@ -475,11 +518,18 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 				presentation_display_id: this.state.presentationDisplayId !== null ? String(this.state.presentationDisplayId) : '',
 				notes_display_id: this.state.notesDisplayId !== null ? String(this.state.notesDisplayId) : '',
 				login_state: this.state.loginState ? 'Yes' : 'No',
-				logged_in_user: this.state.loggedInUser || ''
+				logged_in_user: this.state.loggedInUser || '',
+				backup_forwarding_enabled: response.backupForwardingEnabled === true ? 'Yes' : (response.backupForwardingEnabled === false ? 'No' : '—'),
+				backup_1_ip: (b[0] && b[0].ip) ? String(b[0].ip) : '—',
+				backup_1_status: b[0] ? fmt(b[0].status) : '—',
+				backup_2_ip: (b[1] && b[1].ip) ? String(b[1].ip) : '—',
+				backup_2_status: b[1] ? fmt(b[1].status) : '—',
+				backup_3_ip: (b[2] && b[2].ip) ? String(b[2].ip) : '—',
+				backup_3_status: b[2] ? fmt(b[2].status) : '—'
 			})
 			
 			// Trigger feedback updates
-			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state')
+			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state', 'backup_forwarding_enabled')
 			
 			this.log('debug', `State updated: presentation=${this.state.presentationOpen}, notes=${this.state.notesOpen}, slide=${this.state.currentSlide}/${this.state.totalSlides}, title=${this.state.presentationTitle || 'N/A'}`)
 		}

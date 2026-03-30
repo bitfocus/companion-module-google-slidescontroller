@@ -12,6 +12,11 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      upload_to_release:
+        description: 'If set, upload the built .tgz to this existing release (e.g. v1.0.0). Leave empty to only build.'
+        required: false
+        default: ''
 
 jobs:
   build:
@@ -65,3 +70,28 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  upload-to-existing-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.upload_to_release != ''
+    permissions:
+      contents: write
+    steps:
+      - name: Download package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: companion-module-google-slidescontroller
+          path: release
+
+      - name: Upload .tgz to existing release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tgz=$(find release -name "*.tgz" -type f | head -1)
+          if [ -z "$tgz" ]; then
+            echo "::error::No .tgz found in artifact (release/)"
+            exit 1
+          fi
+          echo "Uploading $tgz to release ${{ github.event.inputs.upload_to_release }}"
+          gh release upload "${{ github.event.inputs.upload_to_release }}" "$tgz" --clobber

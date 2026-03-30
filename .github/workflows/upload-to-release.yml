@@ -36,15 +36,20 @@ jobs:
         run: yarn run package
 
       - name: List build output
-        run: ls -la *.tgz 2>/dev/null || ls -la
+        run: |
+          echo "Contents of workspace:"
+          ls -la
+          echo "Any .tgz files:"
+          find . -maxdepth 3 -name "*.tgz" -type f
 
       - name: Upload .tgz to existing release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tgz=$(ls *.tgz 2>/dev/null | head -1)
+          tgz=$(find . -maxdepth 3 -name "*.tgz" -type f | head -1)
           if [ -z "$tgz" ]; then
-            echo "No .tgz found"
+            echo "::error::No .tgz produced by build (checked . and subdirs)"
             exit 1
           fi
+          echo "Uploading $tgz to release ${{ inputs.release_tag }}"
           gh release upload "${{ inputs.release_tag }}" "$tgz" --clobber

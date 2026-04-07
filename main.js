@@ -26,7 +26,9 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			loginState: false,
 			loggedInUser: null,
 			backupForwardingEnabled: false,
-			backupStatuses: []
+			backupStatuses: [],
+			tunnelEnabled: false,
+			tunnelUrl: ''
 		}
 		
 		// Polling interval
@@ -304,7 +306,9 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			{ variableId: 'backup_2_ip', name: 'Backup 2 IP' },
 			{ variableId: 'backup_2_status', name: 'Backup 2 Status' },
 			{ variableId: 'backup_3_ip', name: 'Backup 3 IP' },
-			{ variableId: 'backup_3_status', name: 'Backup 3 Status' }
+			{ variableId: 'backup_3_status', name: 'Backup 3 Status' },
+			{ variableId: 'tunnel_enabled', name: 'WAN Tunnel Enabled (Yes/No)' },
+			{ variableId: 'tunnel_url', name: 'WAN Tunnel URL' }
 		]
 		
 		this.setVariableDefinitions(variables)
@@ -420,6 +424,20 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 					return this.state.backupForwardingEnabled === true
 				},
 				showInvert: true
+			},
+			tunnel_enabled: {
+				type: 'boolean',
+				name: 'WAN Tunnel Enabled',
+				description: 'Active when the Cloudflare Quick Tunnel is running',
+				defaultStyle: {
+					color: combineRgb(255, 255, 255),
+					bgcolor: combineRgb(0, 120, 200)
+				},
+				options: [],
+				callback: (feedback) => {
+					return this.state.tunnelEnabled === true
+				},
+				showInvert: true
 			}
 		}
 		
@@ -461,7 +479,9 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			loginState: response.loginState === true,
 			loggedInUser: response.loggedInUser || null,
 			backupForwardingEnabled: response.backupForwardingEnabled === true,
-			backupStatuses: this.state.backupStatuses || []
+			backupStatuses: this.state.backupStatuses || [],
+			tunnelEnabled: response.tunnelEnabled === true,
+			tunnelUrl: response.tunnelUrl || ''
 		}
 		const isPrimary = response.backupForwardingEnabled !== undefined && response.backupForwardingEnabled !== null
 		if (isPrimary) {
@@ -496,7 +516,9 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			this.state.presentationDisplayId !== newState.presentationDisplayId ||
 			this.state.notesDisplayId !== newState.notesDisplayId ||
 			this.state.backupForwardingEnabled !== newState.backupForwardingEnabled ||
-			backupStatusesJson !== prevBackupStatusesJson
+			backupStatusesJson !== prevBackupStatusesJson ||
+			this.state.tunnelEnabled !== newState.tunnelEnabled ||
+			this.state.tunnelUrl !== newState.tunnelUrl
 		
 		if (stateChanged) {
 			this.state = newState
@@ -525,11 +547,13 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 				backup_2_ip: (b[1] && b[1].ip) ? String(b[1].ip) : '—',
 				backup_2_status: b[1] ? fmt(b[1].status) : '—',
 				backup_3_ip: (b[2] && b[2].ip) ? String(b[2].ip) : '—',
-				backup_3_status: b[2] ? fmt(b[2].status) : '—'
+				backup_3_status: b[2] ? fmt(b[2].status) : '—',
+				tunnel_enabled: this.state.tunnelEnabled ? 'Yes' : 'No',
+				tunnel_url: this.state.tunnelUrl || ''
 			})
 			
 			// Trigger feedback updates
-			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state', 'backup_forwarding_enabled')
+			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state', 'backup_forwarding_enabled', 'tunnel_enabled')
 			
 			this.log('debug', `State updated: presentation=${this.state.presentationOpen}, notes=${this.state.notesOpen}, slide=${this.state.currentSlide}/${this.state.totalSlides}, title=${this.state.presentationTitle || 'N/A'}`)
 		}

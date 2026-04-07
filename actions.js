@@ -316,6 +316,75 @@ module.exports = function (self) {
 				}
 			},
 		},
+
+		enable_tunnel: {
+			name: 'Enable WAN Tunnel',
+			description: 'Start the Cloudflare Quick Tunnel for WAN access.',
+			options: [],
+			callback: async () => {
+				try {
+					self.log('info', 'Enabling WAN tunnel')
+					const response = await self.apiRequest('POST', '/api/tunnel-enable', {})
+					self.log('info', response.message || 'Tunnel enabled')
+				} catch (error) {
+					self.log('error', `Failed to enable tunnel: ${error.message}`)
+				}
+			},
+		},
+
+		disable_tunnel: {
+			name: 'Disable WAN Tunnel',
+			description: 'Stop the Cloudflare Quick Tunnel.',
+			options: [],
+			callback: async () => {
+				try {
+					self.log('info', 'Disabling WAN tunnel')
+					const response = await self.apiRequest('POST', '/api/tunnel-disable', {})
+					self.log('info', response.message || 'Tunnel disabled')
+				} catch (error) {
+					self.log('error', `Failed to disable tunnel: ${error.message}`)
+				}
+			},
+		},
+
+		show_tunnel_qr: {
+			name: 'Show Tunnel QR Code',
+			description: 'Display a QR code for the WAN tunnel URL on the notes monitor.',
+			options: [
+				{
+					id: 'duration',
+					type: 'number',
+					label: 'Duration (seconds)',
+					default: 20,
+					min: 5,
+					max: 300,
+				},
+			],
+			callback: async (event) => {
+				try {
+					self.log('info', `Showing tunnel QR for ${event.options.duration}s`)
+					const response = await self.apiRequest('POST', '/api/show-tunnel-qr', { duration: event.options.duration })
+					self.log('info', response.message || 'QR shown')
+				} catch (error) {
+					self.log('error', `Failed to show tunnel QR: ${error.message}`)
+				}
+			},
+		},
+
+		hide_tunnel_qr: {
+			name: 'Hide Tunnel QR Code',
+			description: 'Dismiss the WAN tunnel QR code overlay.',
+			options: [],
+			callback: async () => {
+				try {
+					self.log('info', 'Hiding tunnel QR')
+					const response = await self.apiRequest('POST', '/api/hide-tunnel-qr', {})
+					self.log('info', response.message || 'QR hidden')
+				} catch (error) {
+					self.log('error', `Failed to hide tunnel QR: ${error.message}`)
+				}
+			},
+		},
 	}
 	
 	console.log('[gslide-opener] actions.js - Registering', Object.keys(actionDefinitions).length, 'actions')

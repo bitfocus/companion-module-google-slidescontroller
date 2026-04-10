@@ -1,24 +1,29 @@
-# Bitfocus Companion Module for Google Slides Controller
+# Companion Module for Google Slides Opener
 
-This module allows you to control the Google Slides Opener Electron app from Bitfocus Companion.
-
-The app runs on your presentation computer and exposes an HTTP API; this module connects to that API to open presentations, navigate slides, control speaker notes, and more.
-
-- **App (required):** [Google Slides Opener](https://github.com/TomsFaire/Google-Slides-Controller) — run it on the same machine as Companion (or use the app’s Host/Port to point to another machine).
+Control presentations and speaker notes from your Bitfocus Companion setup. Navigate slides, manage speaker notes windows, and monitor real-time status.
 
 ## Setup
 
-1. Install and run the **Google Slides Opener** app on the computer that will drive the presentation (or the machine Companion will talk to).
-2. In the app, note the **API port** (default **9595**).
-3. In Companion, add this module and set **Host** (e.g. `127.0.0.1` if the app is on the same machine) and **Port** to match the app’s API port.
+1. In Companion, import the module from this folder
+2. Add a connection and set the presentation computer's IP and API port (default 9595)
+3. Create buttons and actions to control your presentations
 
-## Actions
+## What you can do
 
-- Open Presentation (by URL), Open Presentation with Notes
-- Open Preset 1 / 2 / 3
-- Close Presentation, Reload Presentation
-- Next / Previous Slide, Go to Slide
-- Open / Close Speaker Notes, Scroll Notes Up/Down, Zoom In/Out Notes
-- Toggle Video Playback
+- Open, close, and reload presentations
+- Navigate slides (next, previous, go to specific slide)
+- Open and close speaker notes, scroll, and zoom
+- Save and recall preset presentations
+- Monitor presentation state (open/closed, current slide, etc.)
+- **Tunnel QR** – If the Electron app has **Cloudflare Quick Tunnel** enabled (desktop Settings), use **Show Tunnel QR** / **Hide Tunnel QR** to display the tunnel URL as a QR code on the speaker-notes display
 
-See the main app repository for full documentation.
+## Variables (speaker notes zoom)
+
+The Electron app tracks **native Google Slides** speaker-notes zoom as discrete steps from Slides’ baseline (the same steps as the in-app Zoom in / Zoom out toolbar and the HTTP `/api/zoom-in-notes` / `/api/zoom-out-notes` actions).
+
+- **Speaker Notes Zoom Steps** (`notes_zoom_steps`) — Current offset from baseline while the controller is running (updates when zoom actions succeed and when zoom is restored after reload).
+- **Default Speaker Notes Zoom Steps** (`notes_zoom_default`) — The value saved in app preferences (“start larger” when opening notes). Use it to compare the live step count to your configured default.
+
+## Learn more
+
+Visit the main project: [github.com/TomsFaire/Google-Slides-Controller](https://github.com/TomsFaire/Google-Slides-Controller)

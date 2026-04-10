@@ -25,11 +25,10 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			notesDisplayId: null,
 			loginState: false,
 			loggedInUser: null,
-			backupForwardingEnabled: false,
-			backupStatuses: [],
-			tunnelEnabled: false,
-			tunnelUrl: ''
-		}
+		backupControlsEnabled: true,
+			notesZoomSteps: null,
+			notesZoomDefault: null
+	}
 		
 		// Polling interval
 		this.pollInterval = null
@@ -232,6 +231,8 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 
 	// Set up variable definitions
 	setupVariables() {
+		// VERIFIED (Task 5): timer_elapsed variable correctly maps from API status.timerElapsed
+		// The Electron app scrapes timer value from presenter view DOM and returns it in /api/status
 		const variables = [
 			{
 				variableId: 'presentation_open',
@@ -298,25 +299,28 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 				name: 'Logged In User (Email)'
 			},
 			{
-				variableId: 'backup_forwarding_enabled',
-				name: 'Backup Forwarding Enabled (Primary Only)'
+				variableId: 'backup_controls_enabled',
+				name: 'Backup Controls Enabled (Yes/No)'
 			},
-			{ variableId: 'backup_1_ip', name: 'Backup 1 IP' },
-			{ variableId: 'backup_1_status', name: 'Backup 1 Status' },
-			{ variableId: 'backup_2_ip', name: 'Backup 2 IP' },
-			{ variableId: 'backup_2_status', name: 'Backup 2 Status' },
-			{ variableId: 'backup_3_ip', name: 'Backup 3 IP' },
-			{ variableId: 'backup_3_status', name: 'Backup 3 Status' },
-			{ variableId: 'tunnel_enabled', name: 'WAN Tunnel Enabled (Yes/No)' },
-			{ variableId: 'tunnel_url', name: 'WAN Tunnel URL' }
+			{
+				variableId: 'notes_zoom_steps',
+				name: 'Speaker Notes Zoom Steps (from Slides baseline)'
+			},
+			{
+				variableId: 'notes_zoom_default',
+				name: 'Default Speaker Notes Zoom Steps (preference)'
+			}
 		]
-		
+
 		this.setVariableDefinitions(variables)
 		this.log('info', `Defined ${variables.length} variables`)
 	}
 
 	// Set up feedback definitions
 	setupFeedbacks() {
+		/* STASHED FEEDBACK (Task 1): Image preview feedback removed for future implementation.
+		   The GET /api/get-slide-previews endpoint is still available in the Electron app.
+		   This feedback was not rendering slide preview images usefully. */
 		const feedbacks = {
 			presentation_open: {
 				type: 'boolean',
@@ -411,33 +415,25 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 				},
 				showInvert: true
 			},
-			backup_forwarding_enabled: {
+			backup_controls_enabled: {
 				type: 'boolean',
-				name: 'Backup Forwarding Enabled',
-				description: 'Indicates when primary is forwarding commands to backup machines (primary mode only)',
+				name: 'Backup Controls Enabled',
+				description: 'Style and text change based on whether backup forwarding is on or off',
 				defaultStyle: {
 					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 150, 100)
+					bgcolor: combineRgb(100, 200, 0)
 				},
 				options: [],
 				callback: (feedback) => {
-					return this.state.backupForwardingEnabled === true
-				},
-				showInvert: true
-			},
-			tunnel_enabled: {
-				type: 'boolean',
-				name: 'WAN Tunnel Enabled',
-				description: 'Active when the Cloudflare Quick Tunnel is running',
-				defaultStyle: {
-					color: combineRgb(255, 255, 255),
-					bgcolor: combineRgb(0, 120, 200)
-				},
-				options: [],
-				callback: (feedback) => {
-					return this.state.tunnelEnabled === true
-				},
-				showInvert: true
+					const enabled = this.state.backupControlsEnabled === true
+					// Return actual state so Invert OFF = enabled (Disable Backup Controls), Invert ON = disabled (Enable Backup Controls)
+					return {
+						value: enabled,
+						style: enabled
+							? { bgcolor: combineRgb(0, 180, 0), color: combineRgb(255, 255, 255), text: 'Backups On' }
+							: { bgcolor: combineRgb(80, 80, 80), color: combineRgb(220, 220, 220), text: 'Backups Off' }
+					}
+				}
 			}
 		}
 		
@@ -478,24 +474,10 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			notesDisplayId: response.notesDisplayId !== null && response.notesDisplayId !== undefined ? response.notesDisplayId : null,
 			loginState: response.loginState === true,
 			loggedInUser: response.loggedInUser || null,
-			backupForwardingEnabled: response.backupForwardingEnabled === true,
-			backupStatuses: this.state.backupStatuses || [],
-			tunnelEnabled: response.tunnelEnabled === true,
-			tunnelUrl: response.tunnelUrl || ''
+			backupControlsEnabled: response.backupControlsEnabled === true,
+			notesZoomSteps: response.notesZoomSteps !== null && response.notesZoomSteps !== undefined ? response.notesZoomSteps : null,
+			notesZoomDefault: response.notesZoomDefault !== null && response.notesZoomDefault !== undefined ? response.notesZoomDefault : null
 		}
-		const isPrimary = response.backupForwardingEnabled !== undefined && response.backupForwardingEnabled !== null
-		if (isPrimary) {
-			try {
-				const backupData = await this.apiRequest('GET', '/api/backup-status')
-				newState.backupStatuses = Array.isArray(backupData.backups) ? backupData.backups : []
-			} catch (e) {
-				// keep previous backupStatuses on failure
-			}
-		} else {
-			newState.backupStatuses = []
-		}
-		const backupStatusesJson = JSON.stringify(newState.backupStatuses)
-		const prevBackupStatusesJson = JSON.stringify(this.state.backupStatuses || [])
 		
 		// Check if state changed (compare all fields)
 		const stateChanged = 
@@ -514,16 +496,15 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 			this.state.presentationTitle !== newState.presentationTitle ||
 			this.state.timerElapsed !== newState.timerElapsed ||
 			this.state.presentationDisplayId !== newState.presentationDisplayId ||
+			this.state.backupControlsEnabled !== newState.backupControlsEnabled ||
 			this.state.notesDisplayId !== newState.notesDisplayId ||
-			this.state.backupForwardingEnabled !== newState.backupForwardingEnabled ||
-			backupStatusesJson !== prevBackupStatusesJson ||
-			this.state.tunnelEnabled !== newState.tunnelEnabled ||
-			this.state.tunnelUrl !== newState.tunnelUrl
+			this.state.notesZoomSteps !== newState.notesZoomSteps ||
+			this.state.notesZoomDefault !== newState.notesZoomDefault
 		
 		if (stateChanged) {
 			this.state = newState
-			const b = this.state.backupStatuses
-			const fmt = (s) => (s === 'connected' ? 'Connected' : s === 'disconnected' ? 'Disconnected' : s === 'checking' ? 'Checking…' : String(s || '—'))
+			
+			// Update all variables
 			this.setVariableValues({
 				presentation_open: this.state.presentationOpen ? 'Yes' : 'No',
 				notes_open: this.state.notesOpen ? 'Yes' : 'No',
@@ -541,19 +522,13 @@ class GoogleSlidesOpenerInstance extends InstanceBase {
 				notes_display_id: this.state.notesDisplayId !== null ? String(this.state.notesDisplayId) : '',
 				login_state: this.state.loginState ? 'Yes' : 'No',
 				logged_in_user: this.state.loggedInUser || '',
-				backup_forwarding_enabled: response.backupForwardingEnabled === true ? 'Yes' : (response.backupForwardingEnabled === false ? 'No' : '—'),
-				backup_1_ip: (b[0] && b[0].ip) ? String(b[0].ip) : '—',
-				backup_1_status: b[0] ? fmt(b[0].status) : '—',
-				backup_2_ip: (b[1] && b[1].ip) ? String(b[1].ip) : '—',
-				backup_2_status: b[1] ? fmt(b[1].status) : '—',
-				backup_3_ip: (b[2] && b[2].ip) ? String(b[2].ip) : '—',
-				backup_3_status: b[2] ? fmt(b[2].status) : '—',
-				tunnel_enabled: this.state.tunnelEnabled ? 'Yes' : 'No',
-				tunnel_url: this.state.tunnelUrl || ''
+				backup_controls_enabled: this.state.backupControlsEnabled ? 'Yes' : 'No',
+				notes_zoom_steps: this.state.notesZoomSteps !== null && this.state.notesZoomSteps !== undefined ? String(this.state.notesZoomSteps) : '',
+				notes_zoom_default: this.state.notesZoomDefault !== null && this.state.notesZoomDefault !== undefined ? String(this.state.notesZoomDefault) : ''
 			})
 			
 			// Trigger feedback updates
-			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state', 'backup_forwarding_enabled', 'tunnel_enabled')
+			this.checkFeedbacks('presentation_open', 'notes_open', 'on_slide', 'is_first_slide', 'is_last_slide', 'login_state', 'backup_controls_enabled')
 			
 			this.log('debug', `State updated: presentation=${this.state.presentationOpen}, notes=${this.state.notesOpen}, slide=${this.state.currentSlide}/${this.state.totalSlides}, title=${this.state.presentationTitle || 'N/A'}`)
 		}

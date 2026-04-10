@@ -34,7 +34,7 @@ Configure the app’s **API port** (default **9595**) and, if Companion is on an
 ## How to use this module
 
 1. Install and run the [Google Slides Opener](https://github.com/TomsFaire/Google-Slides-Controller) app on your presentation computer. Note its API port (default **9595**).
-2. In Companion, go to **Modules** → **Import module package** and import this module’s `.tgz` (from [releases](https://github.com/bitfocus/companion-module-google-slidescontroller/releases) or the [Bitfocus Developer Portal](https://developer.bitfocus.io/)).
+2. In Companion, go to **Modules** → **Import module package** and import this module’s `.tgz` (from [releases](https://github.com/bitfocus/companion-module-google-slidescontroller/releases) or the [Bitfocus Developer Portal](https://developer.bitfocus.io/)). For a **local flat tarball** (required layout for import—do not use `npm pack`), run **`yarn pack:import`** in this repo; it writes `companion-module-google-slidescontroller-<version>.tgz`. Alternatively **`yarn package`** produces a bundled `google-slidescontroller-<version>.tgz`.
 3. Add a connection for **Google Slides Controller**. Set **Host** (e.g. `127.0.0.1` if the app is on the same machine as Companion) and **Port** to the app’s API port.
 
 The module polls the app about once per second and updates variables and feedbacks automatically.
@@ -58,6 +58,7 @@ The module polls the app about once per second and updates variables and feedbac
 - `timer_elapsed` (e.g. 00:00:06)
 - `presentation_display_id`, `notes_display_id`
 - `login_state` (Yes/No), `logged_in_user` (email)
+- `notes_zoom_steps`, `notes_zoom_default` (native Slides notes zoom steps vs saved preference; see app **1.9.10+**)
 
 ## Feedbacks
 

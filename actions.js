@@ -287,106 +287,91 @@ module.exports = function (self) {
 			},
 		},
 
-		disable_backup_forwarding: {
-			name: 'Disable Backup Forwarding',
-			description: 'Stop sending commands to backup machines (primary only). Use for deck refresh or failover.',
-			options: [],
-			callback: async () => {
-				try {
-					self.log('info', 'Disabling backup forwarding')
-					const response = await self.apiRequest('POST', '/api/backup-forwarding', { enabled: false })
-					self.log('info', response.message || 'Backup forwarding disabled')
-				} catch (error) {
-					self.log('error', `Failed to disable backup forwarding: ${error.message}`)
-				}
-			},
-		},
-
-		enable_backup_forwarding: {
-			name: 'Enable Backup Forwarding',
-			description: 'Resume sending commands to backup machines (primary only).',
-			options: [],
-			callback: async () => {
-				try {
-					self.log('info', 'Enabling backup forwarding')
-					const response = await self.apiRequest('POST', '/api/backup-forwarding', { enabled: true })
-					self.log('info', response.message || 'Backup forwarding enabled')
-				} catch (error) {
-					self.log('error', `Failed to enable backup forwarding: ${error.message}`)
-				}
-			},
-		},
-
-		enable_tunnel: {
-			name: 'Enable WAN Tunnel',
-			description: 'Start the Cloudflare Quick Tunnel for WAN access.',
-			options: [],
-			callback: async () => {
-				try {
-					self.log('info', 'Enabling WAN tunnel')
-					const response = await self.apiRequest('POST', '/api/tunnel-enable', {})
-					self.log('info', response.message || 'Tunnel enabled')
-				} catch (error) {
-					self.log('error', `Failed to enable tunnel: ${error.message}`)
-				}
-			},
-		},
-
-		disable_tunnel: {
-			name: 'Disable WAN Tunnel',
-			description: 'Stop the Cloudflare Quick Tunnel.',
-			options: [],
-			callback: async () => {
-				try {
-					self.log('info', 'Disabling WAN tunnel')
-					const response = await self.apiRequest('POST', '/api/tunnel-disable', {})
-					self.log('info', response.message || 'Tunnel disabled')
-				} catch (error) {
-					self.log('error', `Failed to disable tunnel: ${error.message}`)
-				}
-			},
-		},
-
-		show_tunnel_qr: {
-			name: 'Show Tunnel QR Code',
-			description: 'Display a QR code for the WAN tunnel URL on the notes monitor.',
+		// Action ids kept as show_share_qr / hide_share_qr so existing Companion buttons keep working.
+		show_share_qr: {
+			name: 'Show Tunnel QR',
+			description:
+				'Show QR code on the speaker-notes display for the Cloudflare Quick Tunnel URL (enable tunnel in desktop Settings first)',
 			options: [
 				{
-					id: 'duration',
+					id: 'durationSec',
 					type: 'number',
-					label: 'Duration (seconds)',
+					label: 'Display Duration (seconds)',
 					default: 20,
 					min: 5,
 					max: 300,
+					required: true,
+					useVariables: true,
 				},
 			],
 			callback: async (event) => {
 				try {
-					self.log('info', `Showing tunnel QR for ${event.options.duration}s`)
-					const response = await self.apiRequest('POST', '/api/show-tunnel-qr', { duration: event.options.duration })
-					self.log('info', response.message || 'QR shown')
+					const durationStr = await self.parseVariablesInString(String(event.options.durationSec))
+					const durationSec = parseInt(durationStr, 10)
+
+					if (isNaN(durationSec) || durationSec < 5 || durationSec > 300) {
+						self.log('error', `Invalid duration: ${durationStr} (must be 5-300 seconds)`)
+						return
+					}
+
+					self.log('info', `Showing tunnel QR for ${durationSec} seconds`)
+					// App expects JSON field "duration" (seconds); old share-link API was removed in app v1.9.5+.
+					const response = await self.apiRequest('POST', '/api/show-tunnel-qr', { duration: durationSec })
+					if (response && response.success === false) {
+						self.log('error', response.error || 'Tunnel QR could not be shown')
+						return
+					}
+					self.log('info', response.message || `QR shown for ${durationSec} seconds`)
 				} catch (error) {
-					self.log('error', `Failed to show tunnel QR: ${error.message}`)
+					self.log('error', `Failed to show QR: ${error.message}`)
 				}
 			},
 		},
 
-		hide_tunnel_qr: {
-			name: 'Hide Tunnel QR Code',
-			description: 'Dismiss the WAN tunnel QR code overlay.',
+		hide_share_qr: {
+			name: 'Hide Tunnel QR',
+			description: 'Hide the tunnel QR overlay on the speaker-notes display',
 			options: [],
 			callback: async () => {
 				try {
-					self.log('info', 'Hiding tunnel QR')
+					self.log('info', 'Hiding tunnel QR overlay')
 					const response = await self.apiRequest('POST', '/api/hide-tunnel-qr', {})
 					self.log('info', response.message || 'QR hidden')
 				} catch (error) {
-					self.log('error', `Failed to hide tunnel QR: ${error.message}`)
+					self.log('error', `Failed to hide QR: ${error.message}`)
 				}
 			},
 		},
+
+	set_backup_controls: {
+		name: 'Set Backup Controls',
+		description: 'Enable or disable backup command forwarding',
+		options: [
+			{
+				id: 'enabled',
+				type: 'dropdown',
+				label: 'Enable/Disable',
+				default: 'enable',
+				choices: [
+					{ id: 'enable', label: 'Enable' },
+					{ id: 'disable', label: 'Disable' },
+				],
+			},
+		],
+		callback: async (event) => {
+			try {
+				const enabled = event.options.enabled === 'enable'
+				self.log('info', `Setting backup controls to ${enabled ? 'enabled' : 'disabled'}`)
+
+				const response = await self.apiRequest('POST', '/api/set-backup-controls', { enabled })
+				self.log('info', `Backup controls ${response.backupControlsEnabled ? 'enabled' : 'disabled'}`)
+			} catch (error) {
+				self.log('error', `Failed to set backup controls: ${error.message}`)
+			}
+		},
+	},
 	}
-	
+
 	console.log('[gslide-opener] actions.js - Registering', Object.keys(actionDefinitions).length, 'actions')
 	self.log('info', `Registering ${Object.keys(actionDefinitions).length} actions`)
 	self.setActionDefinitions(actionDefinitions)
